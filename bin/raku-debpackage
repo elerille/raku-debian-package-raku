@@ -1,0 +1,46 @@
+#!/usr/bin/env perl6
+use Debian::Package::Raku;
+
+
+my %*SUB-MAIN-OPTS = :named-anywhere,
+                     :bundling,
+                     ;
+
+my %default = cache-dir => "$*HOME/.cache/raku-debian-package-raku",
+              source-dir => "$*HOME/API/deb-package",
+              ;
+
+multi sub MAIN("create", Str:D $module-name;; *%args) {
+    my $raku = Debian::Package::Raku.new: |%default, |%args;
+    $raku.create: $module-name;
+}
+multi sub MAIN("create", Str:D $module-name, Str:D $url;; *%args) {
+    my $raku = Debian::Package::Raku.new: |%default, |%args;
+    $raku.create: $module-name, $url;
+}
+multi sub MAIN("create-debian", Str:D $module-name;; *%args) {
+    my $raku = Debian::Package::Raku.new: |%default, |%args;
+    my $debian-name = Debian::Package::Raku::name-to-debian($module-name);
+    my $path = $raku.source-dir.add($debian-name).add($debian-name);
+    $raku.create-debian: $path;
+}
+multi sub MAIN("build", Str:D $module-name;; *%args) {
+    my $raku = Debian::Package::Raku.new: |%default, |%args;
+    my $debian-name = Debian::Package::Raku::name-to-debian($module-name);
+    my $path = $raku.source-dir.add($debian-name).add($debian-name);
+    $raku.create-debian: $path;
+    $raku.build: $path;
+}
+
+#    $archive-name = download($module-url, $module-url.IO.basename);
+#    $dir-name = $archive-name.IO.extension("", :2parts).basename.IO;
+#    unless $dir-name.e {
+#        note "[-] Extract { $archive-name.basename }";
+#        run <tar xvf>, $archive-name, "--one-top-level";
+#        if $dir-name.dir == 1 {
+#            my $tmp = $dir-name.dir[0].basename;
+#            run 'mv', $dir-name, "$dir-name.old";
+#            run 'mv', "$dir-name.old/$tmp", $dir-name;
+#            run 'rmdir', "$dir-name.old";
+#        }
+#    }

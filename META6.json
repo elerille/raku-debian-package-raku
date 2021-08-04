@@ -1,0 +1,21 @@
+{
+  "name": "Debian::Package::Raku",
+  "description": "Create Debian package for a raku module",
+  "version": "0.1",
+  "perl": "6.*",
+  "authors": [
+    "Élerille"
+  ],
+  "auth": "gtihub:elerille",
+  "depends": [
+    "JSON::Fast"
+  ],
+  "build-depends": [],
+  "test-depends": [],
+  "provides": {
+    "Debian::Package::Raku": "lib/Debian/Package/Raku.pm6"
+  },
+  "resources": [],
+  "license": "GPL-3.0-or-later",
+  "source-url": "https://github.com/elerille/raku-debian-package-raku.git"
+}
