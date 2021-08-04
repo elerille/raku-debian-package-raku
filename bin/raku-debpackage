@@ -24,12 +24,25 @@ multi sub MAIN("create-debian", Str:D $module-name;; *%args) {
     my $path = $raku.source-dir.add($debian-name).add($debian-name);
     $raku.create-debian: $path;
 }
+multi sub MAIN("create-debian";; *%args) {
+    my $raku = Debian::Package::Raku.new: |%default, |%args;
+    $raku.create-debian: $*CWD;
+}
 multi sub MAIN("build", Str:D $module-name;; *%args) {
     my $raku = Debian::Package::Raku.new: |%default, |%args;
     my $debian-name = Debian::Package::Raku::name-to-debian($module-name);
     my $path = $raku.source-dir.add($debian-name).add($debian-name);
-    $raku.create-debian: $path;
     $raku.build: $path;
+}
+multi sub MAIN("build";; *%args) {
+    my $raku = Debian::Package::Raku.new: |%default, |%args;
+    if "debian".IO.e {
+        $raku.build: $*CWD;
+    } elsif $*CWD.basename.IO.e && "{ $*CWD.basename }/debian".IO.e {
+        $raku.build: $*CWD.basename.IO;
+    } else {
+        warn "Not found source directory";
+    }
 }
 
 #    $archive-name = download($module-url, $module-url.IO.basename);

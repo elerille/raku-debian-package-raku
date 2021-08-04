@@ -1,0 +1,12 @@
+Source: raku-debian-package-raku
+Maintainer: Élerille <elerille+debian@thran.io>
+Section: interpreters
+Priority: optional
+Build-Depends: debhelper-compat (= 12), dh-perl6
+Standards-Version: 4.5.1
+
+Package: raku-debian-package-raku
+Architecture: all
+Depends: rakudo, ${misc:Depends}, raku-json-fast
+Description: Raku module Debian::Package::Raku
+ Create Debian package for a raku module

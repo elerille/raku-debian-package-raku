@@ -98,7 +98,6 @@ method create-debian(::?CLASS:D:
     my $debian = $path.add("debian");
     if $debian.e {
         warn "Debian directory already exists";
-        run <rm -fr>, $debian.dir;
     }
     $debian.mkdir;
     self.create-debian-changelog: $path, %meta;
@@ -106,7 +105,6 @@ method create-debian(::?CLASS:D:
     self.create-debian-control: $path, %meta;
     self.create-debian-source-format: $path, %meta;
     self.create-debian-install: $path, %meta;
-    say $path.dir;
 }
 method create-debian-changelog(::?CLASS:D:
                                IO:D $path,
@@ -115,7 +113,8 @@ method create-debian-changelog(::?CLASS:D:
     my $date = DateTime.now(formatter => &date-formatter);
     my $changelog = $path.add("debian").add("changelog");
     if $changelog.e {
-        die "$changelog already exists";
+        warn "$changelog already exists";
+        return
     }
     $changelog.spurt: qq:to/END/;
 { name-to-debian %meta<name> } ({ %meta<version> }-1) UNRELEASED; urgency=medium
@@ -131,11 +130,12 @@ method create-debian-rules(::?CLASS:D:
                            %meta)
 {
     if 'Build.pm6'.IO.e {
-        die "Build.pm6 exists, this is not supported";
+        warn "Build.pm6 exists, this is not supported";
     }
     my $rules = $path.add("debian").add("rules");
     if $rules.e {
-        die "$rules already exists";
+        warn "$rules already exists";
+        return
     }
     $rules.spurt: q:to/END/;
 #!/usr/bin/make -f
@@ -153,7 +153,8 @@ method create-debian-source-format(::?CLASS:D:
     my $format = $path.add("debian").add("source").add("format");
     $path.add("debian").add("source").mkdir;
     if $format.e {
-        die "$format already exists";
+        warn "$format already exists";
+        return
     }
     $format.spurt: "3.0 (quilt)";
 }
@@ -164,13 +165,18 @@ method create-debian-control(::?CLASS:D:
 {
     my $control = $path.add("debian").add("control");
     if $control.e {
-        die "$control already exists";
+        warn "$control already exists";
+        return
     }
     my @build-deps = 'debhelper-compat (= 12)', 'dh-perl6';
-    if %meta<depends> or %meta<test-depends> or %meta<build-depends> {
-        die "Unsupported deps";
-    }
     my @deps = 'rakudo', '${misc:Depends}';
+    for (|%meta<depends>, |%meta<test-depends>, |%meta<build-depends>) {
+        unless $_ ~~ Str:D {
+            warn "Unsupported deps: ", $_.raku;
+            next;
+        }
+        @deps.push: name-to-debian $_;
+    }
     my $description = qq:to/END/;
 Raku module { %meta<name> }
 { %meta<description>.indent(1) }
@@ -200,7 +206,8 @@ method create-debian-install(::?CLASS:D:
     my $debian-name = name-to-debian %meta<name>;
     my $install = $path.add("debian").add("$debian-name.install");
     if $install.e {
-        die "$install already exists";
+        warn "$install already exists";
+        return;
     }
     my @data;
     @data.push: $('lib/*' => "usr/share/perl6/debian-sources/$debian-name/lib") if 'lib'.IO.e;
@@ -211,10 +218,12 @@ method create-debian-install(::?CLASS:D:
     @data.push: $("bin/*" => "usr/bin") if 'bin'.IO.e;
     my @supported = |<debian lib t META6.json README README.md resources bin Changes LICENSE>,
                     'xt', #= test for maintainer
+                    rx/".iml"$/, '.idea',
+                    '.git', '.gitignore',
                     ;
-    my @unsupported = $path.dir.grep(*.basename !(elem) @supported);
+    my @unsupported = $path.dir.grep(-> $i { not any(@supported.map($i.basename ~~*)) });
     if @unsupported {
-        die "Unsupported file : ", @unsupported».basename;
+        warn "Unsupported file : ", @unsupported».basename.join(' ');
     }
     $install.spurt: @data.map({ .key ~ " " ~ .value }).join("\n");
 
