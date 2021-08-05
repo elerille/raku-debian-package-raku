@@ -62,7 +62,7 @@ multi method create(::?CLASS:D:
                     Str:D $url where .ends-with(".git")
                     )
 {
-#    my $extension = $url.IO.extension(:1parts);
+    #    my $extension = $url.IO.extension(:1parts);
     my $debian-name = name-to-debian $module;
     my $path = $!source-dir.add($debian-name);
     $path.mkdir unless $path.e;
@@ -92,14 +92,14 @@ method pbuilder(::?CLASS:D:
     my IO:D $base-file = "/var/cache/pbuilder/base-$dist.tgz".IO;
     unless $base-file.e {
         note "CREATE PBUILDER WITH ", $dist;
-        run <sudo -A pbuilder create --basetgz>, $base-file, '--distribution', $dist;
+        run <sudo pbuilder create --basetgz>, $base-file, '--distribution', $dist;
         $!cache-dir.add("install-dh.sh").spurt: "#!/bin/sh\napt install -y debhelper dh-perl6";
-        run <sudo -A pbuilder execute --save-after-exec --basetgz>, $base-file, '--distribution', $dist, '--',
+        run <sudo pbuilder execute --save-after-exec --basetgz>, $base-file, '--distribution', $dist, '--',
                 $!cache-dir.add("install-dh.sh");
     }
     if $base-file.modified < now - 60 * 60 {
         note "UPDATE PBUILDER WITH ", $dist;
-        run <sudo -A pbuilder update --basetgz>, $base-file, '--distribution', $dist;
+        run <sudo pbuilder update --basetgz>, $base-file, '--distribution', $dist;
     }
     note "BUILD PBUILDER WITH ", $dist;
     run <echo pdebuild --use-pdebuild-internal -- --basetgz>, $base-file, '--distribution', $dist;
@@ -122,6 +122,7 @@ method create-debian(::?CLASS:D:
     self.create-debian-control: $path, %meta;
     self.create-debian-source-format: $path, %meta;
     self.create-debian-install: $path, %meta;
+    self.create-debian-gitignore: $path, %meta;
 }
 method create-debian-changelog(::?CLASS:D:
                                IO:D $path,
@@ -139,6 +140,25 @@ method create-debian-changelog(::?CLASS:D:
   * Create package for Raku module { %meta<name> }
 
  -- { %*ENV<DEBFULLNAME> } <{ %*ENV<DEBEMAIL> }>  { $date }
+END
+
+}
+method create-debian-gitignore(::?CLASS:D:
+                              IO:D $path,
+                              %meta)
+{
+    my $gitignore = $path.add("debian").add(".gitignore");
+    if $gitignore.e {
+        warn "$gitignore already exists";
+        return
+    }
+    $gitignore.spurt: qq:to/END/;
+*.debhelper
+*.substvars
+files
+debhelper-build-stamp
+
+{ name-to-debian %meta<name> }
 END
 
 }

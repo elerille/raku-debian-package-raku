@@ -1,4 +1,4 @@
-raku-debian-package-raku (0.1.1-1) UNRELEASED; urgency=medium
+raku-debian-package-raku (0.1.2-1) UNRELEASED; urgency=medium
 
   * Create package for Raku module Debian::Package::Raku
 
