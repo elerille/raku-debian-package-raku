@@ -1,4 +1,4 @@
-/.idea/
-/lib/.precomp/
-/.precomp/
-/*.iml
+.idea
+lib/.precomp
+.precomp
+*.iml

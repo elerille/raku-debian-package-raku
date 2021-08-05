@@ -1,5 +1,5 @@
 lib/* usr/share/perl6/debian-sources/raku-debian-package-raku/lib
 t/* usr/share/perl6/debian-sources/raku-debian-package-raku/t
 META* usr/share/perl6/debian-sources/raku-debian-package-raku
-README* usr/share/doc/raku-debian-package-raku/
+# README* usr/share/doc/raku-debian-package-raku/
 bin/* usr/bin

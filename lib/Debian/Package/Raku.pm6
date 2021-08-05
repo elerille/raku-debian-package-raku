@@ -57,6 +57,22 @@ multi method create(::?CLASS:D:
     my $archive-orig = $path.parent.add("{ $debian-name }_{ %meta<version> }.orig.{ $extension }");
     run 'mv', $archive, $archive-orig;
 }
+multi method create(::?CLASS:D:
+                    Str:D $module,
+                    Str:D $url where .ends-with(".git")
+                    )
+{
+#    my $extension = $url.IO.extension(:1parts);
+    my $debian-name = name-to-debian $module;
+    my $path = $!source-dir.add($debian-name);
+    $path.mkdir unless $path.e;
+    $path .= add($debian-name);
+    if $path.e {
+        die "Debian package already exists";
+    }
+    run <git clone>, $url, $path;
+    self.maintainer-archive: $path;
+}
 method build(::?CLASS:D:
              IO:D $path,
              )
@@ -86,6 +102,7 @@ method pbuilder(::?CLASS:D:
         run <sudo -A pbuilder update --basetgz>, $base-file, '--distribution', $dist;
     }
     note "BUILD PBUILDER WITH ", $dist;
+    run <echo pdebuild --use-pdebuild-internal -- --basetgz>, $base-file, '--distribution', $dist;
     run <pdebuild --use-pdebuild-internal -- --basetgz>, $base-file, '--distribution', $dist;
     chdir $old-path;
 }
@@ -170,7 +187,7 @@ method create-debian-control(::?CLASS:D:
     }
     my @build-deps = 'debhelper-compat (= 12)', 'dh-perl6';
     my @deps = 'rakudo', '${misc:Depends}';
-    for (|%meta<depends>, |%meta<test-depends>, |%meta<build-depends>) {
+    for (|(%meta<depends> // @), |(%meta<test-depends> // @), |(%meta<build-depends> // @)) {
         unless $_ ~~ Str:D {
             warn "Unsupported deps: ", $_.raku;
             next;
@@ -204,18 +221,19 @@ method create-debian-install(::?CLASS:D:
                              %meta)
 {
     my $debian-name = name-to-debian %meta<name>;
-    my $install = $path.add("debian").add("$debian-name.install");
+    my $debian = $path.add("debian");
+    my $install = $debian.add("$debian-name.install");
     if $install.e {
         warn "$install already exists";
         return;
     }
     my @data;
-    @data.push: $('lib/*' => "usr/share/perl6/debian-sources/$debian-name/lib") if 'lib'.IO.e;
-    @data.push: $('t/*' => "usr/share/perl6/debian-sources/$debian-name/t") if 't'.IO.e;
+    @data.push: $('lib/*' => "usr/share/perl6/debian-sources/$debian-name/lib") if $path.add('lib').e;
+    @data.push: $('t/*' => "usr/share/perl6/debian-sources/$debian-name/t") if $path.add('t').e;
     @data.push: $("META*" => "usr/share/perl6/debian-sources/$debian-name");
     @data.push: $("README*" => "usr/share/doc/$debian-name/");
-    @data.push: $("resources" => "usr/share/perl6/debian-sources/$debian-name") if 'resources'.IO.e;
-    @data.push: $("bin/*" => "usr/bin") if 'bin'.IO.e;
+    @data.push: $("resources" => "usr/share/perl6/debian-sources/$debian-name") if $path.add('resources').e;
+    @data.push: $("bin/*" => "usr/bin") if $path.add('bin').e;
     my @supported = |<debian lib t META6.json README README.md resources bin Changes LICENSE>,
                     'xt', #= test for maintainer
                     rx/".iml"$/, '.idea',
@@ -237,6 +255,15 @@ method download(::?CLASS:D: Str:D $url, Str:D $fname --> IO:D) {
         run <wget -q>, $url, "-O", $out;
     }
     $out;
+}
+
+method maintainer-archive(::?CLASS:D: IO:D $path) {
+    my %meta = from-json $path.add("META6.json").slurp;
+    my $fname = $path.parent.add("{ name-to-debian %meta<name> }_{ %meta<version> }.orig.tar.xz");
+    chdir $path;
+    run <git clean -Xi .>;
+    chdir "..";
+    run <tar --exclude-vcs>, "--exclude={ $path.basename }/debian", "-cJvf", $fname, $path.basename;
 }
 
 method ecosystems(::?CLASS:D: --> Seq:D) {

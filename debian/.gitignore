@@ -1,0 +1,6 @@
+*.debhelper
+*.substvars
+files
+debhelper-build-stamp
+
+raku-debian-package-raku

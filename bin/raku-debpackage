@@ -44,6 +44,10 @@ multi sub MAIN("build";; *%args) {
         warn "Not found source directory";
     }
 }
+multi sub MAIN("m-archive";; *%args) {
+    my $raku = Debian::Package::Raku.new: |%default, |%args;
+    $raku.maintainer-archive: $*CWD;
+}
 
 #    $archive-name = download($module-url, $module-url.IO.basename);
 #    $dir-name = $archive-name.IO.extension("", :2parts).basename.IO;

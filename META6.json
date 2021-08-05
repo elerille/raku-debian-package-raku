@@ -1,7 +1,7 @@
 {
   "name": "Debian::Package::Raku",
   "description": "Create Debian package for a raku module",
-  "version": "0.1",
+  "version": "0.1.1",
   "perl": "6.*",
   "authors": [
     "Élerille"
